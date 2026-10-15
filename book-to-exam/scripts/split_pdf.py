@@ -4,7 +4,7 @@ r"""
 split_pdf.py — 把一本书切成 chapters/ 目录，每章一个 txt，并产出书籍信息.json。
 
 用法：
-  python split_pdf.py "D:\书架\沟通的方法.pdf" [--out "D:\书架\沟通的方法"] [--min-len 200]
+  python split_pdf.py "D:\书架\你的书.pdf" [--out "D:\书架\你的书"] [--min-len 200]
 
 切分优先级：
   1. PDF 书签目录（doc.get_toc()）—— 最可靠，保留层级
