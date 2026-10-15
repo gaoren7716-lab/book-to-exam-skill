@@ -18,6 +18,7 @@ build_exam.py — 书籍知识库构建器的最后一步：把考点卡片合�
 """
 import argparse
 import glob
+import re
 import json
 import os
 import re
@@ -144,12 +145,17 @@ def main():
             sys.exit('错误：模板缺少占位符 %s' % ph)
     payload = json.dumps(cards, ensure_ascii=False).replace('</', '<\\/')
     full_title = args.title + ' 考点考试系统'
+
+    # 副标题只保留作者/版本等修饰词。结构数字（部分/章/题/通过线）由页面的书本卡统一呈现，
+    # 若副标题里已含"N部分M章"之类结构信息就剥掉，否则会和书本卡重复显示两次。
+    sub = re.sub(r'[·・]?\s*\d+\s*部分\s*\d*\s*章?', '', args.subtitle or '').strip(' ·・')
+    sub_line = ((sub + ' · ') if sub else '') + \
+               '共 %d 题 · %d分通过即视为掌握' % (len(cards), args.pass_score)
     html = (tpl.replace('__CARDS_DATA__', payload)
                .replace('__OUTLINE_DATA__', '[]')   # 占位，随后由 build_outline 注入真实大纲
                .replace('__BOOK_TITLE_JSON__', json.dumps(full_title, ensure_ascii=False))
                .replace('__BOOK_TITLE__', full_title)
-               .replace('__BOOK_SUB__', (args.subtitle + ' · ' if args.subtitle else '') +
-                        '共 %d 题 · %d 章 · %d分通过即视为掌握' % (len(cards), max(c['chapter'] for c in cards), args.pass_score))
+               .replace('__BOOK_SUB__', sub_line)
                .replace('__PASS_SCORE__', str(args.pass_score)))
 
     json_path = os.path.join(book_dir, '考点知识库.json')

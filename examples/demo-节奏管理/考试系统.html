@@ -47,23 +47,23 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--border);bord
 .stat-item{background:var(--panel2);border-radius:10px;padding:10px;text-align:center}
 .stat-item .num{font-size:22px;font-weight:bold}
 .stat-item .lbl{font-size:12px;color:var(--muted)}
-.partstat{display:flex;align-items:center;gap:12px;background:var(--panel2);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.15s}
-.partstat:hover{border-color:var(--accent)}
-.partstat .pnum{width:52px;flex:none;font-size:18px;font-weight:bold;text-align:center}
+.partstat{display:flex;align-items:center;gap:14px;background:var(--panel2);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.15s;margin-bottom:8px}
+.partstat:hover{border:1px solid var(--accent)}
+.partstat .pnum{width:54px;flex:none;font-size:18px;font-weight:bold;text-align:center}
 .partstat .pbody{flex:1;min-width:0}
-.partstat .ptitle{font-size:14px;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.partstat .ptitle{font-size:14px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .partstat .pbar{height:7px;background:#2a2f42;border-radius:4px;overflow:hidden}
-.partstat .pbar i{display:block;height:100%}
-.partstat .pmeta{font-size:12px;color:var(--muted);margin-top:5px}
-.partstat.open{outline:1px solid var(--border)}
-.subch{display:none;padding:2px 0 6px 30px}
+.partstat .pbar i{display:block;height:100%;border-radius:4px}
+.partstat .pmeta{font-size:12px;color:var(--muted);margin-top:6px}
+.partstat.open{outline:1px solid var(--accent)}
+.subch{display:none;padding:4px 0 8px 24px;border-left:2px solid var(--border);margin-left:26px}
 .subch.open{display:block}
 .bookcard{background:linear-gradient(135deg,#1e2440,#232a4a);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px}
 .bookcard .bt{font-size:15px;font-weight:bold;margin-bottom:6px}
 .bookcard .bm{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
-.bookcard .bn{display:flex;gap:18px;flex-wrap:wrap}
+.bookcard .bn{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px}
 .bookcard .bn div{font-size:12px;color:var(--muted)}
-.bookcard .bn b{display:block;font-size:19px;color:var(--text)}
+.bookcard .bn b{display:block;font-size:19px;color:var(--text);font-weight:bold}
 .onboard{background:#1e2438;border:1px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;margin-top:10px}
 .hidden{display:none}
 .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -112,7 +112,8 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--border);bord
   <!-- 首页 -->
   <div id="home">
     <h1 id="book-title">📚 《节奏管理》 考点考试系统</h1>
-    <div class="sub" id="book-sub">示例自编 · 2部分4章 · 共 48 题 · 4 章 · 90分通过即视为掌握</div>
+    <!-- 副标题只放作者/版本等修饰信息；结构数字统一由下方书本卡呈现，避免"24章"重复出现两次 -->
+    <div class="sub" id="book-sub">示例自编 · 共 48 题 · 90分通过即视为掌握</div>
     <div class="otab">
       <span class="tab on" id="tab-outline" onclick="switchView('outline')">📖 知识大纲（按知识点学）</span>
       <span class="tab" id="tab-chapter" onclick="switchView('chapter')">📋 章节速览</span>
@@ -161,7 +162,7 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--border);bord
       </div>
     </div>
 
-    <div class="card" id="book-card">
+    <div class="card bookcard" id="book-card">
       <div class="bt" id="bk-title"></div>
       <div class="bn" id="bk-nums"></div>
       <div class="onboard" id="onboard"></div>
