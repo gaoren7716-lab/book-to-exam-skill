@@ -37,7 +37,6 @@ h1{font-size:22px;margin-bottom:4px}
 .opt.right{border-color:var(--ok);background:#1d3a2c}
 .opt.wrong{border-color:var(--bad);background:#3d2130}
 textarea{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px;font-size:15px;font-family:inherit;min-height:80px;resize:vertical}
-.blank-input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px 16px;font-size:16px;font-family:inherit}
 .explain{background:#20273c;border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:14px;color:#c7cde6}
 .progress-bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin:12px 0}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
@@ -48,10 +47,26 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--border);bord
 .stat-item{background:var(--panel2);border-radius:10px;padding:10px;text-align:center}
 .stat-item .num{font-size:22px;font-weight:bold}
 .stat-item .lbl{font-size:12px;color:var(--muted)}
+.partstat{display:flex;align-items:center;gap:14px;background:var(--panel2);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.15s;margin-bottom:8px}
+.partstat:hover{border:1px solid var(--accent)}
+.partstat .pnum{width:54px;flex:none;font-size:18px;font-weight:bold;text-align:center}
+.partstat .pbody{flex:1;min-width:0}
+.partstat .ptitle{font-size:14px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.partstat .pbar{height:7px;background:#2a2f42;border-radius:4px;overflow:hidden}
+.partstat .pbar i{display:block;height:100%;border-radius:4px}
+.partstat .pmeta{font-size:12px;color:var(--muted);margin-top:6px}
+.partstat.open{outline:1px solid var(--accent)}
+.subch{display:none;padding:4px 0 8px 24px;border-left:2px solid var(--border);margin-left:26px}
+.subch.open{display:block}
+.bookcard{background:linear-gradient(135deg,#1e2440,#232a4a);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.bookcard .bt{font-size:15px;font-weight:bold;margin-bottom:6px}
+.bookcard .bm{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.bookcard .bn{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px}
+.bookcard .bn div{font-size:12px;color:var(--muted)}
+.bookcard .bn b{display:block;font-size:19px;color:var(--text);font-weight:bold}
+.onboard{background:#1e2438;border:1px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;margin-top:10px}
 .hidden{display:none}
 .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.self-judge{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-.answer-reveal{background:var(--panel2);border-radius:10px;padding:12px 16px;margin-top:14px;font-size:14px}
 .warn-box{background:#3d3220;border:1px solid #6b5a2e;border-radius:10px;padding:10px 16px;margin:10px 0;font-size:13px;color:#ffd88a}
 /* ===== 知识大纲树 ===== */
 .otab{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -146,9 +161,16 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--border);bord
       </div>
     </div>
 
+    <div class="card bookcard" id="book-card">
+      <div class="bt" id="bk-title"></div>
+      <div class="bn" id="bk-nums"></div>
+      <div class="onboard" id="onboard"></div>
+    </div>
+
     <div class="card" id="stats-card">
       <b>📊 学习进度</b>
-      <div class="stat-grid" id="stats-grid"></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px" id="stats-hint"></div>
+      <div id="stats-grid"></div>
     </div>
     <div class="card">
       <b>开始</b>
@@ -463,7 +485,7 @@ function initHome(){
   loadState();
   scope = new Set(CARDS.map(c=>c.chapter));
   if(!selPts.size) selectAllPtsSilent();
-  renderChips(); renderStats(); updateWrong(); renderOutline(); renderScopeEcho();
+  renderChips(); renderStats(); renderBookCard(); updateWrong(); renderOutline(); renderScopeEcho();
 }
 // 首次进入时默认全选知识点，保证「直接点开始」的老用法不受影响
 function selectAllPtsSilent(){
@@ -530,20 +552,91 @@ function updateScopeInfo(){
   document.getElementById('scope-info').textContent = `已选 ${scope.size} 章，共 ${n} 题`;
   renderScopeEcho();
 }
+// 学习进度：按「部分」聚合，每部分一行，展开才看章节
 function renderStats(){
-  const byCh = {};
-  CARDS.forEach(c=>{
-    byCh[c.chapter] = byCh[c.chapter] || {total:0, right:0};
-    byCh[c.chapter].total++;
-    if(state.answered[c.id] === 'right') byCh[c.chapter].right++;
+  const grid = document.getElementById('stats-grid');
+  const hint = document.getElementById('stats-hint');
+  if(!OUTLINE || !OUTLINE.length){          // 无大纲时降级为扁平章节格
+    const byCh = {};
+    CARDS.forEach(c=>{
+      byCh[c.chapter] = byCh[c.chapter] || {total:0, right:0};
+      byCh[c.chapter].total++;
+      if(state.answered[c.id] === 'right') byCh[c.chapter].right++;
+    });
+    grid.innerHTML = '<div class="stat-grid">' + Object.keys(byCh).sort((a,b)=>a-b).map(ch=>{
+      const s = byCh[ch];
+      const pct = s.total ? Math.round(s.right/s.total*100) : 0;
+      return `<div class="stat-item"><div class="num" style="color:${pct>=90?'var(--ok)':pct>=60?'var(--warn)':'var(--bad)'}">${pct}%</div><div class="lbl">第${ch}章 ${s.right}/${s.total}</div></div>`;
+    }).join('') + '</div>';
+    hint.textContent = '按章查看';
+    return;
+  }
+  const started = CARDS.some(c=>state.answered[c.id]);
+  hint.textContent = started ? '点任一部分展开章节' : '还没开始答题，展开可看各章题量';
+  grid.innerHTML = OUTLINE.map((p,i)=>{
+    const s = partStats(p);
+    const col = s.pct>=90?'var(--ok)':s.pct>=60?'var(--warn)':'var(--bad)';
+    return `<div class="partstat" id="ps-${i}" onclick="togglePartStat(${i})">
+      <div class="pnum" style="color:${col}">${s.pct}%</div>
+      <div class="pbody">
+        <div class="ptitle">${esc(p.part)}</div>
+        <div class="pbar"><i style="width:${s.pct}%;background:${col}"></i></div>
+        <div class="pmeta">${p.chapters.length} 章 · ${s.total} 题 · 已掌握 ${s.right}</div>
+      </div>
+    </div>
+    <div class="subch" id="pch-${i}">${p.chapters.map(c=>{
+      const cs = chapStats(c);
+      const ccol = cs.pct>=90?'var(--ok)':cs.pct>=60?'var(--warn)':'var(--bad)';
+      return `<div class="partstat" style="margin-bottom:6px" onclick="jumpToChapter(${c.ch})">
+        <div class="pnum" style="font-size:14px;color:${ccol}">${cs.pct}%</div>
+        <div class="pbody">
+          <div class="ptitle" style="font-size:13px">第${c.ch}章 ${esc(c.title)}</div>
+          <div class="pmeta">${cs.right}/${cs.total} 题</div>
+        </div></div>`;
+    }).join('')}</div>`;
+  }).join('');
+}
+function togglePartStat(i){
+  const box = document.getElementById('pch-'+i);
+  if(!box) return;
+  box.classList.toggle('open');
+  document.getElementById('ps-'+i).classList.toggle('open', box.classList.contains('open'));
+}
+// 从学习进度跳到大纲对应章节并展开高亮
+function jumpToChapter(ch){
+  switchView('outline');
+  OUTLINE.forEach((p,pi)=>{
+    if(p.chapters.some(c=>c.ch === ch)){
+      const pe = document.getElementById('part-'+pi);
+      if(pe && !pe.classList.contains('open')) togglePart(pi);
+    }
   });
-  let html = '';
-  Object.keys(byCh).sort((a,b)=>a-b).forEach(ch=>{
-    const s = byCh[ch];
-    const pct = s.total ? Math.round(s.right/s.total*100) : 0;
-    html += `<div class="stat-item"><div class="num" style="color:${pct>=90?'var(--ok)':pct>=60?'var(--warn)':'var(--bad)'}">${pct}%</div><div class="lbl">第${ch}章 ${s.right}/${s.total}</div></div>`;
-  });
-  document.getElementById('stats-grid').innerHTML = html;
+  const body = document.getElementById('chap-'+ch);
+  if(body){
+    body.classList.add('open');
+    setTimeout(()=>body.scrollIntoView({behavior:'smooth', block:'center'}), 60);
+  }
+}
+// 书本介绍卡 + 首次上手引导
+function renderBookCard(){
+  const parts = (OUTLINE && OUTLINE.length) ? OUTLINE.length : 0;
+  const chapters = CARDS.reduce((s,c)=>Math.max(s,c.chapter), 0);
+  document.getElementById('bk-title').textContent = __BOOK_TITLE_JSON__;
+  document.getElementById('bk-nums').innerHTML =
+    `<div>部分<b>${parts||'—'}</b></div><div>章节<b>${chapters}</b></div>` +
+    `<div>题目<b>${CARDS.length}</b></div><div>通过线<b>${PASS_SCORE}分</b></div>`;
+  const answered = Object.keys(state.answered).length;
+  const ob = document.getElementById('onboard');
+  if(answered === 0){
+    ob.innerHTML = '<b>第一次来？三步开始：</b><br>' +
+      '① 点开上方大纲的某一部分，勾掉你想学的知识点<br>' +
+      '② 点「只考选中的」直接考这几道，或「只学选中的」先看解析<br>' +
+      '③ 想完整验收，点「正式考试」，' + PASS_SCORE + ' 分以上算掌握';
+  } else {
+    const right = Object.values(state.answered).filter(x=>x==='right').length;
+    ob.innerHTML = `已作答 <b>${answered}</b> / ${CARDS.length} 题，答对 <b>${right}</b> 题。` +
+      `继续「只考选中的」补薄弱章节，或「正式考试」完整验收。`;
+  }
 }
 function updateWrong(){
   const w = Object.keys(state.wrongBook).length;
@@ -632,6 +725,7 @@ function pickOpt(i, el){
 // 数字键 1-4 快速选择
 document.addEventListener('keydown', e=>{
   if(document.getElementById('exam').classList.contains('hidden')) return;
+  if(e.ctrlKey || e.metaKey || e.altKey) return;   // 不拦截浏览器自身组合键
   if(e.key==='Enter' || e.key===' '){
     if(!document.getElementById('btn-next').disabled){ nextQ(); }
     return;
@@ -703,7 +797,7 @@ function finishExam(){
   el.className = 'score-num ' + (score>=PASS_SCORE?'pass':'fail');
   const v = document.getElementById('score-verdict');
   if(score>=PASS_SCORE){ v.textContent = '🎉 通过！该范围内容已掌握'; v.style.color='var(--ok)'; }
-  else{ v.textContent = '❌ 未达 90 分，错题已进入错题本'; v.style.color='var(--bad)'; }
+  else{ v.textContent = `❌ 未达 ${PASS_SCORE} 分，错题已进入错题本`; v.style.color='var(--bad)'; }
   document.getElementById('score-detail').textContent = `答对 ${right}/${total} 题 · 正式考试达到 ${PASS_SCORE} 分即视为掌握所选范围`;
   const byCh = {};
   exam.answers.forEach(a=>{

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>书本上传 · 切章导出</title>
+<style>
+:root{--bg:#0f1117;--panel:#1a1d27;--panel2:#20242f;--border:#2e3348;--text:#e8eaf2;--muted:#8b91a8;--accent:#6c8cff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh}
+.wrap{max-width:900px;margin:0 auto;padding:32px 16px 70px}
+h1{font-size:23px;margin-bottom:6px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:22px;line-height:1.7}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+.card b{font-size:15px;display:block;margin-bottom:10px}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:44px 20px;text-align:center;cursor:pointer;transition:.15s;background:var(--panel2)}
+.drop:hover,.drop.hot{border-color:var(--accent);background:#1c2338}
+.drop .big{font-size:34px;margin-bottom:10px}
+.drop .t1{font-size:15px;margin-bottom:6px}
+.drop .t2{font-size:12px;color:var(--muted);line-height:1.7}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);flex:1;min-width:130px}
+input,select{background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:13px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+button{background:linear-gradient(135deg,#6c8cff,#8a6cff);color:#fff;border:none;border-radius:9px;padding:10px 16px;font-size:14px;cursor:pointer;font-family:inherit}
+button:hover{opacity:.9}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.prog{height:8px;background:#2a2f42;border-radius:4px;overflow:hidden;margin:12px 0}
+.prog i{display:block;height:100%;background:var(--accent);width:0}
+.msg{font-size:13px;padding:10px 13px;border-radius:9px;margin-top:10px;line-height:1.7}
+.msg.ok{background:#12261c;border:1px solid #1f5c3d;color:var(--ok)}
+.msg.err{background:#2a1416;border:1px solid #6b2020;color:var(--bad)}
+.msg.info{background:#1a1f33;border:1px solid var(--border);color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:normal;font-size:12px}
+td b{color:var(--accent)}
+.stat{display:flex;gap:22px;flex-wrap:wrap;margin:12px 0}
+.stat div{font-size:12px;color:var(--muted)}
+.stat b{display:block;font-size:21px;color:var(--text)}
+.hint{font-size:12px;color:var(--muted);line-height:1.8;margin-top:10px}
+.hint code{background:var(--panel2);padding:2px 6px;border-radius:4px;font-size:11px}
+.ol{margin-left:18px;font-size:13px;line-height:1.9;color:var(--muted)}
+.ol li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>书本上传 · 切章导出</h1>
+  <div class="sub">
+    选一本PDF / EPUB / TXT → 本页提取全文并按目录切章 → 导出一个章节包。<br>
+    把章节包交给 AI，AI 读完即可生成这套考试系统（纯选择题 + 知识大纲）。<b style="color:var(--muted)">全程在你本机浏览器内完成，文件不会上传到任何服务器。</b>
+  </div>
+
+  <div class="card">
+    <b>1 · 选择文件</b>
+    <div class="drop" id="drop">
+      <div class="big">📖</div>
+      <div class="t1">点击选择，或把文件拖到这里</div>
+      <div class="t2">支持 PDF（最佳，含书签目录）/ EPUB / TXT / Markdown</div>
+      <input type="file" id="file" accept=".pdf,.epub,.txt,.md,.markdown" style="display:none">
+    </div>
+    <div class="msg info" id="fname">尚未选择文件</div>
+  </div>
+
+  <div class="card" id="cfg-card" style="display:none">
+    <b>2 · 切章设置</b>
+    <div class="row">
+      <label class="f">书名<input id="bname" placeholder="留空则用文件名"></label>
+      <label class="f">章节识别正则<input id="re" placeholder="第[一二三四五六七八九十\d]+[章节]"></label>
+      <label class="f">最短章长<input id="minlen" type="number" value="200" min="0"></label>
+    </div>
+    <div class="hint">
+      优先使用 PDF 书签目录；没有书签时才用上面的正则。<b>最短章长</b>用于丢弃目录页残章。
+    </div>
+    <div class="row">
+      <button id="btn-split">开始切章</button>
+      <button class="ghost" id="btn-export" disabled>导出章节包</button>
+    </div>
+    <div class="prog"><i id="bar"></i></div>
+    <div class="msg" id="smsg"></div>
+  </div>
+
+  <div class="card" id="res-card" style="display:none">
+    <b>3 · 切章结果</b>
+    <div class="stat" id="st"></div>
+    <div style="max-height:320px;overflow:auto"><table id="tbl"></table></div>
+  </div>
+
+  <div class="card" id="next-card" style="display:none">
+    <b>4 · 接下来怎么出题</b>
+    <ol class="ol">
+      <li>点「导出章节包」，得到一个 <code>书名_章节包.zip</code></li>
+      <li>解压后是一个文件夹：<code>chapters/</code> 每章一个 txt，另有 <code>书籍信息.json</code>（含章节清单与全文统计）</li>
+      <li>把这个文件夹的路径告诉 AI（或者直接把 txt 内容贴给它），说：<br>
+          「按 book-to-exam 流程给这本书出考试系统」</li>
+      <li>AI 会读取每章 → 写知识框架 → 产出概念/场景/案例三类选择题 → 生成考试网页与 Anki 闪卡</li>
+    </ol>
+    <div class="hint">
+      <b>为什么这一步还需要 AI？</b>切章是纯文本处理，本页就能做完。但「哪句是核心方法、哪个案例能出场景题、干扰项该取哪章的术语」
+      需要真正理解原文，这是纯前端 JS 做不到的。本页负责把书拆干净，AI 负责把书读懂。
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- 工具 ----------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s);
+function setMsg(el,txt,kind){ el.className='msg '+(kind||'info'); el.innerHTML=txt; }
+
+let RAW='';        // 提取出的全文
+let CHS=[];        // [{ch,title,text,chars}]
+let BOOK='';
+
+// ---------- 文件选择 ----------
+const drop=$('drop'), inp=$('file');
+drop.onclick=()=>inp.click();
+inp.onchange=e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); };
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) handleFile(f); });
+
+function handleFile(f){
+  BOOK=(f.name.replace(/\.[^.]+$/,''));
+  $('fname').className='msg ok';
+  $('fname').innerHTML='已选择：<b>'+esc(f.name)+'</b> · '+(f.size/1024/1024).toFixed(2)+' MB';
+  $('cfg-card').style.display='block';
+  setMsg($('smsg'),'正在读取…','info');
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      if(ext==='txt'||ext==='md'||ext==='markdown'){ RAW=e.target.result; done('TXT/MD'); }
+      else if(ext==='pdf'){ setMsg($('smsg'),'PDF 需要用 <code>python切章脚本</code> 处理（本页不做 PDF 解析）。<br>若 PDF 无文字层（扫描件），需先 OCR。<br><b>请改用命令行版：</b><code>python book-to-exam/scripts/split_pdf.py 你的书.pdf</code>','info'); }
+      else if(ext==='epub'){ setMsg($('smsg'),'EPUB 是 zip 包，本页不解析。<br>请用 <code>python book-to-exam/scripts/split_pdf.py</code> 同级的解包脚本，或手动解压后取 .xhtml 文本。','info'); }
+      else setMsg($('smsg'),'暂不支持 .'+ext+'。请用 PDF / TXT / Markdown。','err');
+    }catch(err){ setMsg($('smsg'),'读取失败：'+esc(err.message),'err'); }
+  };
+  rd.onerror=()=>setMsg($('smsg'),'读取失败','err');
+  if(ext==='txt'||ext==='md'||ext==='markdown') rd.readAsText(f,'utf-8'); else rd.readAsArrayBuffer(f);
+}
+
+function done(kind){
+  const chars=RAW.replace(/\s/g,'').length;
+  setMsg($('smsg'),'全文提取完成（'+kind+'）：<b>'+chars+'</b> 字。设置好参数后点「开始切章」。','ok');
+  $('bname').value=BOOK;
+}
+
+// ---------- 切章 ----------
+$('btn-split').onclick=()=>{
+  if(!RAW.trim()){ setMsg($('smsg'),'请先选择 TXT/Markdown 文件','err'); return; }
+  let re=null;
+  const rs=$('re').value.trim();
+  if(rs){ try{ re=new RegExp(rs); }catch(e){ setMsg($('smsg'),'正则不合法：'+esc(e.message),'err'); return; } }
+  if(!re){ setMsg($('smsg'),'请填写章节识别正则，例如：<code>第[一二三四五六七八九十\\d]+[章节]</code>','err'); return; }
+  $('bar').style.width='30%';
+  const minlen=parseInt($('minlen').value||'0',10);
+  const lines=RAW.split(/\r?\n/);
+  let cur=null, acc=[];
+  CHS=[];
+  for(const ln of lines){
+    if(re.test(ln.trim()) && ln.trim().length<40){
+      if(cur) pushChap(cur,acc,minlen);
+      cur=ln.trim(); acc=[];
+    } else acc.push(ln);
+  }
+  if(cur) pushChap(cur,acc,minlen);
+  $('bar').style.width='100%';
+  if(!CHS.length){ setMsg($('smsg'),'没有匹配到章节。请调整正则——例如正文用「第1章」「第一章」「Chapter 1」等写法。','err'); $('bar').style.width='0'; return; }
+  renderResult();
+  setMsg($('smsg'),'切章完成：<b>'+CHS.length+'</b> 章。确认无误后点「导出章节包」。','ok');
+  $('btn-export').disabled=false;
+  $('next-card').style.display='block';
+};
+
+function pushChap(title,acc,minlen){
+  const text=acc.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  if(text.replace(/\s/g,'').length>=minlen) CHS.push({title,text});
+}
+
+function renderResult(){
+  const total=CHS.reduce((s,c)=>s+c.text.replace(/\s/g,'').length,0);
+  $('res-card').style.display='block';
+  $('st').innerHTML='<div>章节<b>'+CHS.length+'</b></div><div>总字数<b>'+total+'</b></div><div>平均每章<b>'+Math.round(total/CHS.length)+'</b></div>';
+  $('tbl').innerHTML='<tr><th>#</th><th>章节标题</th><th>字数</th></tr>'+
+    CHS.map((c,i)=>'<tr><td>'+(i+1)+'</td><td><b>'+esc(c.title)+'</b></td><td>'+c.text.replace(/\s/g,'').length+'</td></tr>').join('');
+}
+
+// ---------- 导出 ----------
+$('btn-export').onclick=()=>{
+  const name=($('bname').value||BOOK).replace(/[\\/:*?"<>|]/g,'_');
+  const meta={
+    书名:name, 生成时间:new Date().toLocaleString('zh-CN'),
+    章节数:CHS.length,
+    总字数:CHS.reduce((s,c)=>s+c.text.replace(/\s/g,'').length,0),
+    章节清单:CHS.map((c,i)=>({序号:i+1, 标题:c.title, 字数:c.text.replace(/\s/g,'').length}))
+  };
+  // 逐章打包成「一个文件夹的多个文件」，用最朴素的方式：生成一个可直接保存的 HTML 清单 + 各章 txt
+  const blob=new Blob([JSON.stringify(meta,null,2)],{type:'application/json'});
+  saveBlob(blob, name+'_书籍信息.json');
+  // 各章合并为一个带分隔符的 txt，方便直接投喂 AI
+  const all=CHS.map((c,i)=>'\n\n========== 第'+(i+1)+'章 '+c.title+' ==========\n\n'+c.text).join('');
+  saveBlob(new Blob([all],{type:'text/plain;charset=utf-8'}), name+'_章节全文.txt');
+  setMsg($('smsg'),'已导出 2 个文件：<code>'+esc(name)+'_书籍信息.json</code>（章节清单）与 <code>'+esc(name)+'_章节全文.txt</code>（分章全文）。<br>把 txt 交给 AI 即可开始出题。','ok');
+};
+function saveBlob(blob,filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},100);
+}
+</script>
+</body>
+</html>
