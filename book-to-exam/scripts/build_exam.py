@@ -18,7 +18,6 @@ build_exam.py — 书籍知识库构建器的最后一步：把考点卡片合�
 """
 import argparse
 import glob
-import re
 import json
 import os
 import re
