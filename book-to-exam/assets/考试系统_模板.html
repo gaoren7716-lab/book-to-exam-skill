@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>《沟通的方法》考点考试系统</title>
+<style>
+:root{
+  --bg:#0f1117;--panel:#1a1d27;--panel2:#222636;--border:#2e3348;
+  --text:#e8eaf2;--muted:#8b91a8;--accent:#6c8cff;--accent2:#8a6cff;
+  --ok:#3ddc84;--bad:#ff5c7a;--warn:#ffb347;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh;line-height:1.7}
+.wrap{max-width:860px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:22px;margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.btn{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:15px;cursor:pointer;margin:4px 6px 4px 0;transition:.15s}
+.btn:hover{filter:brightness(1.15)}
+.btn.ghost{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+.btn.small{padding:6px 14px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.chip{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:13px;margin:3px 4px 3px 0;cursor:pointer;transition:.15s}
+.chip.on{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+.tag{font-size:11px;color:var(--muted);background:var(--panel2);padding:2px 8px;border-radius:6px;margin-right:6px}
+.qtype{font-size:12px;font-weight:bold;padding:2px 10px;border-radius:6px;margin-right:8px}
+.qtype.choice{background:#2b3a67;color:#9db8ff}
+.qtype.blank{background:#4a3a1f;color:#ffcf7a}
+.qtype.short{background:#3a2b52;color:#c9a8ff}
+.qtype.scenario{background:#1d4a3f;color:#6ee7b7}
+.qtype.case{background:#4a3320;color:#f0b67f}
+.opt{display:block;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:8px 0;cursor:pointer;transition:.15s;position:relative;padding-right:44px}
+.opt:hover{border-color:var(--accent)}
+.opt .key{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);background:#2c3149;border-radius:5px;padding:2px 8px;border:1px solid var(--border)}
+.opt.sel{border-color:var(--accent);background:#25305a}
+.opt.right{border-color:var(--ok);background:#1d3a2c}
+.opt.wrong{border-color:var(--bad);background:#3d2130}
+textarea{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px;font-size:15px;font-family:inherit;min-height:80px;resize:vertical}
+.blank-input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px 16px;font-size:16px;font-family:inherit}
+.explain{background:#20273c;border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:14px;color:#c7cde6}
+.progress-bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin:12px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+.score-circle{text-align:center;padding:30px 0}
+.score-num{font-size:64px;font-weight:bold}
+.pass{color:var(--ok)}.fail{color:var(--bad)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px}
+.stat-item{background:var(--panel2);border-radius:10px;padding:10px;text-align:center}
+.stat-item .num{font-size:22px;font-weight:bold}
+.stat-item .lbl{font-size:12px;color:var(--muted)}
+.hidden{display:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.self-judge{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.answer-reveal{background:var(--panel2);border-radius:10px;padding:12px 16px;margin-top:14px;font-size:14px}
+.warn-box{background:#3d3220;border:1px solid #6b5a2e;border-radius:10px;padding:10px 16px;margin:10px 0;font-size:13px;color:#ffd88a}
+/* ===== 知识大纲树 ===== */
+.otab{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.otab .tab{padding:8px 18px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);cursor:pointer;font-size:14px}
+.otab .tab.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+.obar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--muted);position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5}
+.opart{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.ohead{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
+.ohead:hover{background:var(--panel2)}
+.ohead .caret{color:var(--muted);font-size:12px;width:14px;transition:.2s;flex-shrink:0}
+.opart.open .ohead .caret{transform:rotate(90deg)}
+.ohead .pname{font-weight:bold;font-size:15px}
+.ohead .pmeta{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.obody{display:none;padding:0 16px 14px}
+.opart.open .obody{display:block}
+.ochap{border-left:2px solid var(--border);margin:10px 0 10px 4px;padding-left:12px}
+.ochap>.chead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;flex-wrap:wrap}
+.ochap>.chead:hover .cname{color:var(--accent)}
+.ochap .cname{font-size:14px;font-weight:bold}
+.ochap .csum{font-size:12px;color:var(--muted)}
+.ochap .cacts{margin-left:auto;display:flex;gap:6px}
+.mini{font-size:11px;padding:3px 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--border);cursor:pointer;color:var(--muted)}
+.mini:hover{border-color:var(--accent);color:var(--text)}
+.mini.on{background:var(--accent);color:#fff;border-color:transparent}
+.cpoints{display:none;padding:4px 0 8px}
+.ochap.open .cpoints{display:block}
+.opt-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;margin:4px 0;background:var(--panel2);border:1px solid transparent}
+.opt-row:hover{border-color:var(--border)}
+.opt-row.sel{border-color:var(--accent);background:#25305a}
+.opt-row .mark{width:15px;height:15px;border:1px solid var(--border);border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+.opt-row.sel .mark{background:var(--accent);border-color:var(--accent)}
+.opt-row .pname2{font-size:13.5px}
+.opt-row .tagT{font-size:10px;color:var(--muted);border:1px solid var(--border);padding:1px 6px;border-radius:4px;flex-shrink:0}
+.opt-row .pdesc{font-size:12px;color:var(--muted);margin-left:auto;text-align:right;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbar{width:52px;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;flex-shrink:0}
+.pbar i{display:block;height:100%;background:var(--ok)}
+.hintbox{background:#1e2438;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--muted);margin-bottom:12px}
+.selbar{position:sticky;bottom:0;background:linear-gradient(180deg,transparent,var(--bg) 30%);padding:12px 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 首页 -->
+  <div id="home">
+    <h1 id="book-title">📚 __BOOK_TITLE__</h1>
+    <div class="sub" id="book-sub">__BOOK_SUB__</div>
+    <div class="otab">
+      <span class="tab on" id="tab-outline" onclick="switchView('outline')">📖 知识大纲（按知识点学）</span>
+      <span class="tab" id="tab-chapter" onclick="switchView('chapter')">📋 章节速览</span>
+    </div>
+
+    <!-- 视图一：知识大纲树 -->
+    <div id="view-outline">
+      <div class="hintbox">
+        <b>用法</b>：先在树上点开章节，勾选你感兴趣或想重点突破的<b>知识点</b>，
+        再点底部「只学选中的内容」——系统会按你选的范围出题，不必整本都考。
+      </div>
+      <div class="obar">
+        <span class="mini" onclick="expandAll(true)">全部展开</span>
+        <span class="mini" onclick="expandAll(false)">全部收起</span>
+        <span class="mini" onclick="selectAllPts(true)">全选知识点</span>
+        <span class="mini" onclick="selectAllPts(false)">清空选择</span>
+        <span class="mini" onclick="selectWeak()">只选未掌握</span>
+        <input id="pt-search" placeholder="🔍 搜索知识点关键词…"
+               oninput="filterOutline(this.value)"
+               style="flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;font-size:13px">
+      </div>
+      <div id="outline-tree"></div>
+      <div class="selbar">
+        <span id="sel-summary" style="font-size:13px;color:var(--muted)"></span>
+        <span style="flex:1"></span>
+        <button class="btn ghost small" onclick="learnSelected('read')">📖 只学选中的（速览模式）</button>
+        <button class="btn small" onclick="learnSelected('exam')">✎ 只考选中的</button>
+      </div>
+    </div>
+
+    <!-- 视图二：章节速览（原有扁平勾选） -->
+    <div id="view-chapter" class="hidden">
+      <div class="card">
+        <b>考试范围</b>
+        <div id="scope-chips" style="margin-top:10px"></div>
+        <div style="margin-top:8px;font-size:13px;color:var(--muted)" id="scope-info"></div>
+      </div>
+      <div class="card">
+        <b>题型</b>
+        <div style="margin-top:8px">
+          <span class="chip on" id="tm-all" onclick="setTypeMode('all',this)">全部题型</span>
+          <span class="chip" id="tm-memory" onclick="setTypeMode('memory',this)">概念原理题</span>
+          <span class="chip" id="tm-apply" onclick="setTypeMode('apply',this)">应用题（场景/案例）</span>
+        </div>
+        <div style="margin-top:8px;font-size:13px;color:var(--muted)">全部为选择题，答完即出解析；应用题考的是「遇到这个情境你会怎么做」</div>
+      </div>
+    </div>
+
+    <div class="card" id="stats-card">
+      <b>📊 学习进度</b>
+      <div class="stat-grid" id="stats-grid"></div>
+    </div>
+    <div class="card">
+      <b>开始</b>
+      <div style="margin-top:10px">
+        <button class="btn" onclick="startExam('normal')">▶ 正式考试（随机顺序）</button>
+        <button class="btn ghost" onclick="startApplyExam()">🎯 应用题专项（场景+案例）</button>
+        <button class="btn ghost" onclick="startExam('wrong')">🔁 错题重考 <span id="wrong-count"></span></button>
+        <button class="btn ghost" onclick="startExam('browse')">📖 浏览模式（看题即看答案）</button>
+        <button class="btn ghost small" onclick="resetAll()" style="margin-top:8px">🗑 清空所有记录</button>
+      </div>
+      <div style="margin-top:10px;padding:10px 14px;background:#1e2438;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted)" id="scope-echo"></div>
+      <div style="margin-top:8px;text-align:right;font-size:12px;color:var(--muted)">💡 快捷键：数字键 1–6 选择选项，回车/空格进入下一题</div>
+      <div class="warn-box" id="wrong-hint"></div>
+    </div>
+  </div>
+
+  <!-- 大纲速览（选中知识点的知识点清单，纯阅读） -->
+  <div id="reader" class="hidden">
+    <div class="top-bar">
+      <span id="reader-title" style="font-weight:bold"></span>
+      <button class="btn ghost small" onclick="closeReader()">返回大纲</button>
+    </div>
+    <div id="reader-body"></div>
+  </div>
+
+  <!-- 考试页 -->
+  <div id="exam" class="hidden">
+    <div class="top-bar">
+      <span id="exam-progress" style="color:var(--muted);font-size:14px"></span>
+      <button class="btn ghost small" onclick="confirmQuit()">退出</button>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
+    <div class="card" id="q-card">
+      <div><span class="qtype" id="q-type"></span><span class="tag" id="q-chapter"></span><span class="tag" id="q-diff"></span></div>
+      <div style="font-size:17px;margin:14px 0" id="q-text"></div>
+      <div id="q-body"></div>
+      <div id="q-feedback"></div>
+      <div style="margin-top:18px;text-align:right">
+        <button class="btn" id="btn-next" onclick="nextQ()">下一题 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结果页 -->
+  <div id="result" class="hidden">
+    <div class="card score-circle">
+      <div class="sub">本次考试成绩</div>
+      <div class="score-num" id="score-num"></div>
+      <div id="score-verdict" style="font-size:18px;margin:8px 0"></div>
+      <div style="color:var(--muted);font-size:14px" id="score-detail"></div>
+    </div>
+    <div class="card">
+      <b>本章表现</b>
+      <div class="stat-grid" id="result-grid"></div>
+    </div>
+    <div class="card">
+      <button class="btn" onclick="goHome()">返回首页</button>
+      <button class="btn ghost" onclick="startExam(lastMode)">再考一次</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CARDS = __CARDS_DATA__;
+const OUTLINE = __OUTLINE_DATA__;
+const PASS_SCORE = __PASS_SCORE__;
+const LS_KEY = 'book_exam_v1::' + __BOOK_TITLE_JSON__;
+
+let state = {wrongBook:{}, history:[], answered:{}};
+let exam = null, lastMode = 'normal';
+let scope = new Set();
+let typeMode = 'all';
+let viewMode = 'outline';
+let selPts = new Set();   // 选中的知识点 id
+let CARD_BY_ID = {};
+CARDS.forEach(c=>CARD_BY_ID[c.id]=c);
+const MEMORY_TYPES = ['choice'];
+const APPLY_TYPES = ['scenario','case'];
+const TYPE_LABEL = {choice:'单选题',scenario:'场景题',case:'案例题'};
+
+function loadState(){ try{ state = JSON.parse(localStorage.getItem(LS_KEY)) || state; }catch(e){} }
+function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+function norm(s){
+  if(Array.isArray(s)) s = s.join('；');
+  return String(s).replace(/\s+/g,'').replace(/[，。、；：""''（）()!.？?]/g,'').toLowerCase();
+}
+
+// ---------- 视图切换 ----------
+function switchView(v){
+  viewMode = v;
+  document.getElementById('view-outline').classList.toggle('hidden', v!=='outline');
+  document.getElementById('view-chapter').classList.toggle('hidden', v!=='chapter');
+  document.getElementById('tab-outline').classList.toggle('on', v==='outline');
+  document.getElementById('tab-chapter').classList.toggle('on', v==='chapter');
+  if(v==='chapter'){ updateScopeInfo(); }
+}
+
+// ---------- 知识大纲树 ----------
+function ptStats(pt){
+  let right = 0;
+  pt.cards.forEach(id=>{ if(state.answered[id]==='right') right++; });
+  return {right, total: pt.total||pt.cards.length, pct: pt.total?Math.round(right/pt.total*100):0};
+}
+function chapStats(ch){
+  let right=0, total=0;
+  ch.points.forEach(p=>{ const s=ptStats(p); right+=s.right; total+=s.total; });
+  return {right, total, pct: total?Math.round(right/total*100):0};
+}
+function partStats(p){
+  let right=0, total=0;
+  p.chapters.forEach(c=>{ const s=chapStats(c); right+=s.right; total+=s.total; });
+  return {right, total, pct: total?Math.round(right/total*100):0};
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+function renderOutline(){
+  if(!OUTLINE || !OUTLINE.length){
+    document.getElementById('outline-tree').innerHTML =
+      '<div class="warn-box">本书未生成知识大纲（缺少知识框架文件），请用「章节速览」视图。</div>';
+    updateSelSummary();
+    return;
+  }
+  let html = '';
+  OUTLINE.forEach((p,pi)=>{
+    const ps = partStats(p);
+    const allCh = p.chapters.every(c=>c.points.every(pt=>selPts.has(pt.id)));
+    html += `<div class="opart" id="part-${pi}">
+      <div class="ohead" onclick="togglePart(${pi})">
+        <span class="caret">▶</span>
+        <span class="pname">${esc(p.part)}</span>
+        <span class="mini" onclick="event.stopPropagation();selPart(${pi},${!allCh})">${allCh?'取消本部分':'选本部分'}</span>
+        <span class="pmeta">${p.chapters.length} 章 · ${ps.total} 题 · 掌握 ${ps.pct}%</span>
+      </div>
+      <div class="obody">`;
+    p.chapters.forEach(c=>{
+      const cs = chapStats(c);
+      const allPt = c.points.every(pt=>selPts.has(pt.id));
+      html += `<div class="ochap" id="chap-${c.ch}">
+        <div class="chead" onclick="toggleChap(${c.ch})">
+          <span class="caret" style="color:var(--muted);font-size:11px">▶</span>
+          <span class="cname">第${c.ch}章 ${esc(c.title)}</span>
+          ${c.summary?`<span class="csum">${esc(c.summary)}</span>`:''}
+          <span class="cacts">
+            <span class="pbar" title="掌握度 ${cs.pct}%"><i style="width:${cs.pct}%;background:${cs.pct>=90?'var(--ok)':cs.pct>=60?'var(--warn)':'var(--bad)'}"></i></span>
+            <span class="mini" onclick="event.stopPropagation();selChap(${c.ch},${!allPt})">${allPt?'取消本章':'选本章'}</span>
+            <span class="mini" onclick="event.stopPropagation();openReader(${c.ch})">速览</span>
+          </span>
+        </div>
+        <div class="cpoints">`;
+      c.points.forEach(pt=>{
+        const s = ptStats(pt);
+        const tag = pt.other? '兜底' : (pt.fromTag? '标签' : '');
+        html += `<div class="opt-row${selPts.has(pt.id)?' sel':''}" data-pt="${pt.id}"
+          data-ch="${c.ch}" data-search="${esc(pt.name+' '+pt.desc)}">
+          <span class="mark" onclick="event.stopPropagation();togglePt('${pt.id}')">${selPts.has(pt.id)?'✓':''}</span>
+          <span class="pname2">${esc(pt.name)}</span>
+          ${tag?`<span class="tagT">${tag}</span>`:''}
+          <span class="pbar" title="掌握度 ${s.pct}%"><i style="width:${s.pct}%;background:${s.pct>=90?'var(--ok)':s.pct>=60?'var(--warn)':'var(--bad)'}"></i></span>
+          <span style="font-size:11px;color:var(--muted);min-width:52px;text-align:right">${s.right}/${s.total}</span>
+          <span class="pdesc" title="${esc(pt.desc)}">${esc(pt.desc)}</span>
+          <span class="mini" onclick="event.stopPropagation();openReader(${c.ch},'${pt.id}')">看内容</span>
+        </div>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `</div></div>`;
+  });
+  document.getElementById('outline-tree').innerHTML = html;
+  updateSelSummary();
+}
+function togglePart(pi){
+  const el = document.getElementById('part-'+pi);
+  el.classList.toggle('open');
+  if(el.classList.contains('open'))
+    el.querySelectorAll('.ochap').forEach(c=>c.classList.add('open'));
+}
+function toggleChap(ch){
+  const el = document.getElementById('chap-'+ch);
+  if(el) el.classList.toggle('open');
+}
+function expandAll(open){
+  document.querySelectorAll('.opart').forEach(p=>{
+    p.classList.toggle('open', open);
+    p.querySelectorAll('.ochap').forEach(c=>c.classList.toggle('open', open));
+  });
+}
+function selPart(pi, on){
+  OUTLINE[pi].chapters.forEach(c=>c.points.forEach(pt=>{ on?selPts.add(pt.id):selPts.delete(pt.id); }));
+  renderOutline();
+}
+function selChap(ch, on){
+  OUTLINE.forEach(p=>p.chapters.forEach(c=>{
+    if(c.ch===ch) c.points.forEach(pt=>{ on?selPts.add(pt.id):selPts.delete(pt.id); });
+  }));
+  renderOutline();
+}
+function selectAllPts(on){
+  selPts.clear();
+  if(on) OUTLINE.forEach(p=>p.chapters.forEach(c=>c.points.forEach(pt=>selPts.add(pt.id))));
+  renderOutline();
+}
+function selectWeak(){
+  selPts.clear();
+  OUTLINE.forEach(p=>p.chapters.forEach(c=>c.points.forEach(pt=>{
+    if(ptStats(pt).pct < 90) selPts.add(pt.id);
+  })));
+  renderOutline();
+  // 未掌握的节点默认展开，方便直接看到要补哪些
+  OUTLINE.forEach(p=>p.chapters.forEach(c=>{
+    if(c.points.some(pt=>selPts.has(pt.id))){
+      const pe = document.getElementById('part-'+OUTLINE.indexOf(p));
+      if(pe) pe.classList.add('open');
+      const ce = document.getElementById('chap-'+c.ch);
+      if(ce) ce.classList.add('open');
+    }
+  }));
+}
+function togglePt(pid){
+  selPts.has(pid) ? selPts.delete(pid) : selPts.add(pid);
+  const row = document.querySelector(`.opt-row[data-pt="${pid}"]`);
+  if(row){ row.classList.toggle('sel', selPts.has(pid));
+           row.querySelector('.mark').textContent = selPts.has(pid)?'✓':''; }
+  updateSelSummary();
+}
+function filterOutline(kw){
+  kw = (kw||'').trim().toLowerCase();
+  document.querySelectorAll('.opt-row').forEach(r=>{
+    const hit = !kw || r.getAttribute('data-search').toLowerCase().includes(kw);
+    r.style.display = hit ? '' : 'none';
+  });
+  // 命中时自动展开所属章节
+  if(kw){
+    document.querySelectorAll('.opart,.ochap').forEach(x=>x.classList.add('open'));
+  }
+}
+function selCardIds(){
+  const ids = [];
+  OUTLINE.forEach(p=>p.chapters.forEach(c=>c.points.forEach(pt=>{
+    if(selPts.has(pt.id)) pt.cards.forEach(id=>{ if(ids.indexOf(id)<0) ids.push(id); });
+  })));
+  return ids;
+}
+function updateSelSummary(){
+  const el = document.getElementById('sel-summary');
+  const ids = selCardIds();
+  if(el) el.textContent = ids.length
+    ? `已选 ${selPts.size} 个知识点 / ${ids.length} 道题`
+    : '尚未选择知识点 —— 点上方知识点前的方框，或点章节右侧「选本章」';
+  renderScopeEcho();
+}
+function learnSelected(mode){
+  const ids = selCardIds();
+  if(!ids.length){ alert('请先在树上勾选想学的知识点'); return; }
+  let pool = ids.map(id=>CARD_BY_ID[id]).filter(Boolean);
+  if(!pool.length){ alert('所选知识点下没有题目'); return; }
+  if(mode === 'read'){ openReaderPool(pool); return; }
+  pool.sort(()=>Math.random()-.5);
+  startPool(pool, 'normal');
+}
+// ---------- 大纲速览阅读器 ----------
+function openReader(ch, ptId){
+  const ids = ptId ? null : null;
+  let pool = [], title = '';
+  OUTLINE.forEach(p=>p.chapters.forEach(c=>{
+    if(c.ch !== ch) return;
+    if(ptId){
+      const pt = c.points.find(x=>x.id===ptId);
+      title = `第${c.ch}章 ${c.title} · ${pt.name}`;
+      pool = pt.cards.map(id=>CARD_BY_ID[id]).filter(Boolean);
+    } else {
+      title = `第${c.ch}章 ${c.title}${c.summary?' — '+c.summary:''}`;
+      pool = [];
+      c.points.forEach(pt=>{ pt.cards.forEach(id=>{ if(CARD_BY_ID[id]) pool.push(CARD_BY_ID[id]); }); });
+    }
+  }));
+  openReaderPool(pool, title);
+}
+function openReaderPool(pool, title){
+  if(!pool.length){ alert('该范围没有题目'); return; }
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('exam').classList.add('hidden');
+  document.getElementById('result').classList.add('hidden');
+  document.getElementById('reader').classList.remove('hidden');
+  document.getElementById('reader-title').textContent = title || `速览 · ${pool.length} 题`;
+  // 按章→知识点出现顺序排列，命中过的排前面
+  pool.sort((a,b)=> (state.answered[a.id]==='right'?0:1) - (state.answered[b.id]==='right'?0:1));
+  document.getElementById('reader-body').innerHTML =
+    '<div class="hintbox">速览模式：直接看答案与解析，不计入错题本。看完想自测，回到大纲点「只考选中的」。</div>' +
+    pool.map(c=>{
+      const ai = answerIndex(c);
+      const opt = c.options[ai] || c.answer;
+      const mark = state.answered[c.id]==='right' ? '✅' : (state.wrongBook[c.id] ? '❌' : '⬜');
+      return `<div class="card">
+        <div><span class="qtype ${c.type}">${typeLabel(c.type)}</span>
+          <span class="tag">第${c.chapter}章 ${esc(c.chapterTitle)}</span>
+          <span class="tag">${mark}</span></div>
+        <div style="font-size:15px;margin:10px 0">${esc(c.question)}</div>
+        <div style="color:var(--ok);font-size:14px">✓ ${esc(opt)}</div>
+        <div class="explain">${esc(c.explanation)}</div>
+      </div>`;
+    }).join('');
+}
+function closeReader(){
+  document.getElementById('reader').classList.add('hidden');
+  document.getElementById('home').classList.remove('hidden');
+  initHome();
+}
+
+// ---------- 首页 ----------
+function initHome(){
+  loadState();
+  scope = new Set(CARDS.map(c=>c.chapter));
+  if(!selPts.size) selectAllPtsSilent();
+  renderChips(); renderStats(); updateWrong(); renderOutline(); renderScopeEcho();
+}
+// 首次进入时默认全选知识点，保证「直接点开始」的老用法不受影响
+function selectAllPtsSilent(){
+  selPts.clear();
+  OUTLINE.forEach(p=>p.chapters.forEach(c=>c.points.forEach(pt=>selPts.add(pt.id))));
+}
+function renderChips(){
+  const parts = {};
+  CARDS.forEach(c=>{ (parts[c.part] = parts[c.part] || new Set()).add(c.chapter); });
+  let html = '<span class="chip on" onclick="toggleAll(this)">全选</span>';
+  Object.keys(parts).forEach(p=>{
+    html += `<div style="margin-top:8px"><span class="tag">${p}</span>`;
+    [...parts[p]].sort((a,b)=>a-b).forEach(ch=>{
+      const t = CARDS.find(c=>c.chapter===ch).chapterTitle;
+      const on = scope.has(ch) ? ' on' : '';
+      html += `<span class="chip${on}" data-ch="${ch}" onclick="toggleCh(${ch},this)">${ch} ${t}</span>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('scope-chips').innerHTML = html;
+  updateScopeInfo();
+}
+function toggleCh(ch, el){ scope.has(ch)?scope.delete(ch):scope.add(ch); el.classList.toggle('on'); updateScopeInfo(); }
+function toggleAll(el){
+  const chips = document.querySelectorAll('#scope-chips .chip[data-ch]');
+  if(scope.size === CARDS.reduce((s,c)=>Math.max(s,c.chapter),0)){ /*noop*/ }
+  if(el.classList.contains('on')){ scope.clear(); chips.forEach(c=>c.classList.remove('on')); }
+  else{ CARDS.forEach(c=>scope.add(c.chapter)); chips.forEach(c=>c.classList.add('on')); }
+  el.classList.toggle('on'); updateScopeInfo();
+}
+function inScope(){
+  return CARDS.filter(c=>scope.has(c.chapter) && matchType(c));
+}
+// 正式考试实际生效的范围 = 大纲选中知识点 ∩ 章节勾选 ∩ 题型筛选
+function effectivePool(){
+  const sel = new Set(selCardIds());
+  // 大纲未生成时退化为纯章节范围
+  if(!sel.size) return inScope();
+  return CARDS.filter(c=>sel.has(c.id) && scope.has(c.chapter) && matchType(c));
+}
+function renderScopeEcho(){
+  const el = document.getElementById('scope-echo');
+  if(!el) return;
+  const n = effectivePool().length;
+  const selN = selCardIds().length;
+  el.innerHTML = `当前正式考试范围：<b style="color:var(--text)">${n} 题</b>` +
+    (selN ? `（来自大纲选中的 ${selPts.size} 个知识点 / ${selN} 题，与下方章节勾选取交集）`
+          : '（按「章节速览」中勾选的章节出题）');
+}
+function matchType(c){
+  if(typeMode==='memory') return MEMORY_TYPES.includes(c.type);
+  if(typeMode==='apply') return APPLY_TYPES.includes(c.type);
+  return true;
+}
+function setTypeMode(m, el){
+  typeMode = m;
+  ['tm-all','tm-memory','tm-apply'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  el.classList.add('on');
+  updateScopeInfo();
+  renderScopeEcho();
+}
+function updateScopeInfo(){
+  const n = inScope().length;
+  document.getElementById('scope-info').textContent = `已选 ${scope.size} 章，共 ${n} 题`;
+  renderScopeEcho();
+}
+function renderStats(){
+  const byCh = {};
+  CARDS.forEach(c=>{
+    byCh[c.chapter] = byCh[c.chapter] || {total:0, right:0};
+    byCh[c.chapter].total++;
+    if(state.answered[c.id] === 'right') byCh[c.chapter].right++;
+  });
+  let html = '';
+  Object.keys(byCh).sort((a,b)=>a-b).forEach(ch=>{
+    const s = byCh[ch];
+    const pct = s.total ? Math.round(s.right/s.total*100) : 0;
+    html += `<div class="stat-item"><div class="num" style="color:${pct>=90?'var(--ok)':pct>=60?'var(--warn)':'var(--bad)'}">${pct}%</div><div class="lbl">第${ch}章 ${s.right}/${s.total}</div></div>`;
+  });
+  document.getElementById('stats-grid').innerHTML = html;
+}
+function updateWrong(){
+  const w = Object.keys(state.wrongBook).length;
+  document.getElementById('wrong-count').textContent = w ? `(${w}题待消灭)` : '';
+  document.getElementById('wrong-hint').textContent = w
+    ? `⚠ 错题本有 ${w} 题。错题重考模式下只出错题，答对一次即移出错题本。错题本清空且正式考试≥90分 = 视为掌握本书。`
+    : '✅ 错题本当前为空。';
+  document.querySelector('[onclick="startExam(\'wrong\')"]').disabled = !w;
+}
+
+// ---------- 考试 ----------
+function startApplyExam(){
+  const prev = typeMode;
+  typeMode = 'apply';
+  if(!inScope().length){ typeMode = prev; alert('所选范围内没有应用题，请先选择章节'); return; }
+  typeMode = prev;
+  startExamWith('apply', 'apply');
+}
+function startExam(mode){ startExamWith(mode, 'normal'); }
+// 直接用一个已构建好的题池开考（大纲定向学习走这条路）
+function startPool(pool, mode){
+  lastMode = mode;
+  pool = [...pool];
+  if(mode !== 'browse') pool.sort(()=>Math.random()-.5);
+  exam = {mode, filterMode:'normal', pool, idx:0, answers:[], scored:0, max:pool.length};
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('reader').classList.add('hidden');
+  document.getElementById('result').classList.add('hidden');
+  document.getElementById('exam').classList.remove('hidden');
+  showQ();
+}
+function startExamWith(mode, filterMode){
+  lastMode = mode;
+  let pool;
+  if(mode === 'wrong'){
+    pool = CARDS.filter(c=>state.wrongBook[c.id]);
+    if(!pool.length){ alert('错题本为空！'); return; }
+  } else if(filterMode === 'apply'){
+    pool = inScope().filter(c=>APPLY_TYPES.includes(c.type));
+    if(!pool.length){ alert('所选范围内没有应用题，请先选择章节'); return; }
+  } else {
+    pool = effectivePool();
+    if(!pool.length){
+      if(selCardIds().length) alert('大纲选中的知识点与当前章节/题型筛选没有交集，请调整勾选');
+      else alert('请先选择考试范围');
+      return;
+    }
+  }
+  pool = [...pool];
+  if(mode !== 'browse') pool.sort(()=>Math.random()-.5);
+  exam = {mode, filterMode, pool, idx:0, answers:[], scored:0, max:pool.length};
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('result').classList.add('hidden');
+  document.getElementById('exam').classList.remove('hidden');
+  showQ();
+}
+function typeLabel(t){ return TYPE_LABEL[t]||t; }
+
+function showQ(){
+  const c = exam.pool[exam.idx];
+  const pct = Math.round(exam.idx/exam.pool.length*100);
+  document.getElementById('pfill').style.width = pct+'%';
+  document.getElementById('exam-progress').textContent = `第 ${exam.idx+1} / ${exam.pool.length} 题`;
+  document.getElementById('q-type').textContent = typeLabel(c.type);
+  document.getElementById('q-type').className = 'qtype ' + c.type;
+  document.getElementById('q-chapter').textContent = `第${c.chapter}章 ${c.chapterTitle}`;
+  document.getElementById('q-diff').textContent = {easy:'★',medium:'★★',hard:'★★★'}[c['difficulty']]||'';
+  document.getElementById('q-text').textContent = c.question;
+  document.getElementById('q-feedback').innerHTML = '';
+  document.getElementById('btn-next').disabled = true;
+  picked = -1;
+  // 全部题目均为选择题：一律渲染选项 + 数字键快捷作答
+  const body = document.getElementById('q-body');
+  body.innerHTML = c.options.map((o,i)=>`<div class="opt" onclick="pickOpt(${i},this)">${o}<span class="key">${i+1}</span></div>`).join('');
+  if(exam.mode === 'browse') revealBrowse();
+}
+
+let picked = -1;
+function pickOpt(i, el){
+  if(document.getElementById('q-feedback').innerHTML) return;
+  picked = i;
+  document.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+  gradeChoice();
+}
+// 数字键 1-4 快速选择
+document.addEventListener('keydown', e=>{
+  if(document.getElementById('exam').classList.contains('hidden')) return;
+  if(e.key==='Enter' || e.key===' '){
+    if(!document.getElementById('btn-next').disabled){ nextQ(); }
+    return;
+  }
+  if(['1','2','3','4','5','6'].includes(e.key)){
+    const i = Number(e.key)-1;
+    const opts = document.querySelectorAll('#q-body .opt');
+    if(opts[i] && !document.getElementById('q-feedback').innerHTML) pickOpt(i, opts[i]);
+  }
+});
+function answerIndex(c){
+  const a = String(c.answer||'').trim();
+  let i = c.options.findIndex(o => o.trim().startsWith(a));
+  if(i < 0) i = c.options.findIndex(o => norm(o) === norm(a));
+  if(i < 0) i = c.options.findIndex(o => norm(o).includes(norm(a)) && norm(a).length>1);
+  return i;
+}
+function gradeChoice(){
+  const c = exam.pool[exam.idx];
+  const ansIdx = answerIndex(c);
+  const correct = picked === ansIdx;
+  document.querySelectorAll('.opt').forEach((o,i)=>{
+    if(i===ansIdx) o.classList.add('right');
+    else if(i===picked) o.classList.add('wrong');
+  });
+  finishGrading(correct, `正确答案：${c.options[ansIdx]}<div class="explain">${c.explanation}</div>`);
+}
+function revealBrowse(){
+  const c = exam.pool[exam.idx];
+  const ansIdx = answerIndex(c);
+  document.querySelectorAll('.opt').forEach((o,i)=>{ if(i===ansIdx) o.classList.add('right'); });
+  document.getElementById('q-feedback').innerHTML = `<div class="explain">${c.explanation}</div>`;
+  document.getElementById('btn-next').disabled = false;
+}
+
+function finishGrading(correct, feedbackHtml){
+  exam.answers.push({card:exam.pool[exam.idx], correct});
+  document.getElementById('q-feedback').innerHTML = feedbackHtml;
+  document.getElementById('btn-next').disabled = false;
+  const nb = document.getElementById('btn-next');
+  if(exam.idx === exam.pool.length-1) nb.textContent = '交卷 ✓';
+  if(!correct && exam.mode !== 'browse') state.wrongBook[exam.pool[exam.idx].id] = true;
+  else if(correct && exam.mode === 'wrong') delete state.wrongBook[exam.pool[exam.idx].id];
+  if(exam.mode !== 'browse'){
+    state.answered[exam.pool[exam.idx].id] = correct ? 'right' : 'wrong';
+    saveState();
+  }
+}
+
+function nextQ(){
+  if(exam.mode==='browse'){
+    if(exam.idx < exam.pool.length-1){ exam.idx++; showQ(); }
+    else goHome();
+    return;
+  }
+  if(exam.idx < exam.pool.length-1){ exam.idx++; showQ(); }
+  else finishExam();
+}
+
+function finishExam(){
+  const total = exam.answers.length;
+  const right = exam.answers.filter(a=>a.correct).length;
+  const score = total ? Math.round(right/total*1000)/10 : 0;
+  saveState();
+  document.getElementById('exam').classList.add('hidden');
+  document.getElementById('result').classList.remove('hidden');
+  const el = document.getElementById('score-num');
+  el.textContent = score + ' 分';
+  el.className = 'score-num ' + (score>=PASS_SCORE?'pass':'fail');
+  const v = document.getElementById('score-verdict');
+  if(score>=PASS_SCORE){ v.textContent = '🎉 通过！该范围内容已掌握'; v.style.color='var(--ok)'; }
+  else{ v.textContent = '❌ 未达 90 分，错题已进入错题本'; v.style.color='var(--bad)'; }
+  document.getElementById('score-detail').textContent = `答对 ${right}/${total} 题 · 正式考试达到 ${PASS_SCORE} 分即视为掌握所选范围`;
+  const byCh = {};
+  exam.answers.forEach(a=>{
+    const k = '第'+a.card.chapter+'章 '+a.card.chapterTitle;
+    byCh[k] = byCh[k]||{t:0,r:0}; byCh[k].t++;
+    if(a.correct) byCh[k].r++;
+  });
+  let html = '';
+  Object.entries(byCh).forEach(([k,s])=>{
+    const pct = Math.round(s.r/s.t*100);
+    html += `<div class="stat-item"><div class="num" style="color:${pct>=90?'var(--ok)':pct>=60?'var(--warn)':'var(--bad)'}">${pct}%</div><div class="lbl">${k} ${s.r}/${s.t}</div></div>`;
+  });
+  document.getElementById('result-grid').innerHTML = html;
+  state.history.push({date:new Date().toLocaleString('zh-CN'), mode:exam.mode, score, total});
+  saveState();
+}
+
+function goHome(){
+  document.getElementById('exam').classList.add('hidden');
+  document.getElementById('result').classList.add('hidden');
+  document.getElementById('reader').classList.add('hidden');
+  document.getElementById('home').classList.remove('hidden');
+  initHome();
+}
+function confirmQuit(){
+  if(confirm('确定退出本次考试？已答题目不计分。')) goHome();
+}
+function resetAll(){
+  if(confirm('确定清空错题本和所有答题记录？此操作不可恢复。')){
+    state = {wrongBook:{}, history:[], answered:{}};
+    saveState(); initHome();
+  }
+}
+
+initHome();
+</script>
+</body>
+</html>
