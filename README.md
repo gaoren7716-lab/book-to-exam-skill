@@ -64,15 +64,43 @@ node tools/regression_test.js
 
 ## 两种入口
 
-| | 用什么 | 做什么 |
-|---|---|---|
-| **TXT / Markdown** | `book-to-exam/assets/上传切章.html` | 浏览器里选文件 → 自动切章 → 导出章节包。**纯本地，不上传服务器** |
-| **PDF** | `book-to-exam/scripts/split_pdf.py` | 优先按书签目录切，无书签回退正则。已验证 330 页→24 章、397 页→66 章 |
+### 方式一：本地书架网页（推荐）
 
-切完后把章节包交给 AI 继续出题即可。
+```bash
+python book-to-exam/scripts/书架.py "E:\0 书架"
+```
+
+浏览器自动打开，扫描你的书库 → **点书 → 自动切章 → 生成给我执行的指令** → 复制粘贴给我即可出题。
+
+支持 PDF / EPUB / TXT / Markdown，自动清理文件名里的盗版站标记，
+分类按目录层级缩进显示。切章失败时会明确告诉你是扫描版还是 EPUB 无标题。
+
+<img src="docs/images/05-本地书架网页.png" width="820">
+
+### 方式二：命令行切章
+
+```bash
+python book-to-exam/scripts/split_book.py "D:\书架\书名.epub" --out "./书名"
+```
+
+同样支持四种格式。PDF 优先走书签目录；EPUB 会自动把碎片归并成正式章节，
+并把多册合集（如《鲁迅全集》20 册）按册拆开。
 
 > **一个技术现实**：切章脚本能做，但「哪句是核心方法、哪个案例能出场景题、干扰项该取哪章的术语」
 > 必须 AI 读懂原文——纯前端 JS 做不到。分工是：**脚本把书拆干净，AI 把书读懂。**
+>
+> 所以网页不会「一键出考试系统」，它省掉的是记路径、找书、开终端这些事。
+
+---
+
+## 形态选择
+
+| 想要 | 建议 | 理由 |
+|---|---|---|
+| 自己用，快速出题 | **本地书架网页** | 零安装、点书即可，出题交给 AI |
+| 发给别人用 | 部署成静态网页 + GitHub | 考试系统本身是自包含单文件 HTML |
+| 打包成 exe | 不建议 | 唯一好处是双击图标，能力与网页完全相同，但 40–80MB、改代码要重打包 |
+| 手机 APP / 小程序 | 只适合「刷题」 | 手机上跑不了切章 + 出题。可把考试网页套壳成小程序，逻辑不用改 |
 
 ---
 
@@ -100,9 +128,11 @@ book-to-exam/
 ├─ SKILL.md                  AI 执行规则：拆书、命题、构建、校验
 ├─ assets/
 │  ├─ 考试系统_模板.html      自包含考试网页模板
-│  └─ 上传切章.html          TXT/Markdown 上传切章页
+│  └─ 上传切章.html          TXT/Markdown 浏览器切章页
 └─ scripts/
-   ├─ split_pdf.py           PDF 切章
+   ├─ 书架.py                本地书架网页：扫书 → 点书 → 切章 → 生成指令
+   ├─ split_book.py          PDF / EPUB / TXT / MD 切章
+   ├─ split_pdf.py           旧版 PDF 切章（保留兼容，新代码用 split_book）
    ├─ build_exam.py          合并卡片 → 校验 → 生成 JSON/HTML/Anki
    ├─ build_outline.py       解析知识框架 → 大纲树 + 题目挂载
    └─ build_portal.py        多书聚合总控页
@@ -110,7 +140,9 @@ docs/
 ├─ 出题手册.md               写卡规范
 ├─ 校验清单.md               交付前必跑的机械校验
 └─ roadmap/                  待实施设想（非当前能力）
-tools/regression_test.js     18 项 DOM 桩交互回归
+tools/
+├─ regression_test.js        18 项 DOM 桩交互回归
+└─ split_regression.py       切章脚本回归（从真实书库取样本）
 examples/demo-节奏管理/       一分钟跑通全流程
 ```
 
@@ -120,12 +152,15 @@ examples/demo-节奏管理/       一分钟跑通全流程
 
 | 现象 | 原因与解法 |
 |---|---|
+| 提示「这是扫描版 PDF」 | 没有文字层，图片得OCR 才行。换文字版，或用 Acrobat / 微信读书导出 |
+| 提示「EPUB 标题取不到」 | 该书标题是图片，HTML 里没有文字标题。换 PDF 文字版 |
+| EPUB 切出几百个「未命名章节」 | 同上。`split_book.py` 会自动归并，仍如此说明结构异常 |
+| 合集书章节数爆炸 | 已自动按册拆分（「第一章」反复出现即判为多册）。`--no-split-volume` 可关闭 |
 | 大纲解析出 0 章 | 知识框架的章标题必须写成 `### ① 标题`（圈号），`### 第1章` 解析不到 |
 | 卡片被构建脚本拒收 | 出现填空/简答痕迹。用「出题手册」里的对照表改成选择题 |
 | 大纲兜底节点 > 30% | 知识框架写太粗。要点行要用**加粗术语**或**引号**包住方法名，用 `→` 连接时别漏箭头 |
 | 网页 JS 报语法错 | 纯文本占位符与字符串字面量占位符要分开，且**只放进 HTML 正文，别放进 JS 代码里** |
 | 零填空扫描误报 | 扫**题库 JSON**（question/options/explanation），不要扫整份 HTML——JS 的 `selectWeak()` 会命中"空括号"，快捷键提示会命中"空格" |
-| `split_pdf` 报导入告警 | 用受管 Python：`.../binaries/python/versions/3.13.12/python.exe`，并 `pip install pymupdf` |
 
 ---
 

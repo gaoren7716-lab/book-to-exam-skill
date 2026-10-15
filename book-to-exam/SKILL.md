@@ -57,14 +57,27 @@ description: 把一本书（PDF/EPUB/txt）做成「知识框架 + 选择题库 
 ### 第 1 步：切分全文
 
 ```bash
-python <skill目录>/scripts/split_pdf.py "你的书.pdf" --out "./<书库>/<书名>"
+python <skill目录>/scripts/split_book.py "你的书.epub" --out "./<书库>/<书名>"
 ```
 
-优先用 PDF 书签目录，无书签时回退正则（`--regex`）。产出 `chapters/NN_章名.txt`、`书籍信息.json`、`全文.txt`。
+支持 **PDF / EPUB / TXT / Markdown**。产出 `chapters/NN_章名.txt`、`书籍信息.json`、`全文.txt`。
 
-- 扫描件（无文字层）需先 OCR
-- TXT/Markdown 可走 `assets/上传切章.html` 网页切章
-- 每本书一个独立目录，产物都落在里面
+| 格式 | 切分依据 |
+|------|---------|
+| PDF | 优先书签目录 → 无书签回退正则（`--regex` 自定义） |
+| EPUB | spine 顺序 + 标题层级**自动归并碎片**；「第一章」反复出现判为多册合集，**自动按册拆开** |
+| TXT/MD | 正则扫 `第N章` / `Chapter N` |
+
+三类书会**明确报错而不是静默产出垃圾**，遇到时按提示换书或先OCR：
+
+- 扫描版 PDF（页数够但几乎提不出文字）→ 需要 OCR
+- EPUB 标题是图片（HTML 里无文字标题）→ 换PDF 文字版
+- 一级标题识别不足 3 个→ 不做归并，原样输出交人工判断
+
+用户想省事时可以让TA 跑 `scripts/书架.py`：本地网页扫书 → 点书 → 切章 → 复制指令给你，
+这是给「不知道路径、不想开终端」的用户准备的入口。
+
+每本书一个独立目录，产物都落在里面。
 
 ### 第 2 步：写知识框架
 
