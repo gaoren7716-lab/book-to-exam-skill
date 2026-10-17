@@ -24,7 +24,14 @@ global.document = {
   createElement(){ return _mk('n'); },
   addEventListener(){}
 };
-global.localStorage = {getItem(){return null}, setItem(){}, removeItem(){}};
+// 本地存储用真字典，导出/导入这类要读回写入值的逻辑才能测
+global._store = {};
+global.localStorage = {
+  getItem(k){ return Object.prototype.hasOwnProperty.call(global._store,k) ? global._store[k] : null; },
+  setItem(k,v){ global._store[k] = String(v); },
+  removeItem(k){ delete global._store[k]; },
+  clear(){ global._store = {}; }
+};
 global.window = global; global.alert = ()=>{}; global.confirm = ()=>true;
 // 从当前考试网页实时抽取脚本，保证测试永远跟着模板走（而不是冻结快照）
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -93,6 +100,30 @@ T('16 部分聚合可收起', !document.getElementById('pch-0').classList.contai
 jumpToChapter(1);
 T('17 跳转后大纲视图已激活', !document.getElementById('view-outline').classList.contains('hidden'), '');
 T('18 跳转后目标章节已展开', document.getElementById('chap-1').classList.contains('open'), '第1章');
+
+// ---- 19-23：进度导出 / 导入（部署到网页后换设备靠它） ----
+CARDS.slice(0,12).forEach((c,i)=>{ state.answered[c.id] = i%3===0 ? 'wrong' : 'right'; });
+CARDS.slice(12,17).forEach(c=>{ state.wrongBook[c.id] = true; });
+saveState();
+const aB = Object.keys(state.answered).length, wB = Object.keys(state.wrongBook).length;
+exportProgress();
+const payload = globalThis.localStorage.getItem('book_exam_xfer_v1');
+T('19 导出生成进度文件', !!payload, (payload?payload.length:0)+' 字节');
+if(payload){
+  const exp = JSON.parse(payload);
+  T('20 导出含书名与题数', !!exp._book && Object.keys(exp.answered).length===aB, exp._book);
+  state = {wrongBook:{}, history:[], answered:{}}; saveState();
+  _els['xfer-in'] = _mk('xfer-in'); _els['xfer-in'].value = payload;
+  doImport();
+  T('21 导入后往返一致',
+    Object.keys(state.answered).length===aB && Object.keys(state.wrongBook).length===wB,
+    Object.keys(state.answered).length+'/'+aB+' 记录');
+  const bad = JSON.parse(payload); bad._book = '《另一本书》';
+  _els['xfer-in'].value = JSON.stringify(bad); doImport();
+  T('22 跨书进度被拒绝', Object.keys(state.answered).length===aB);
+}
+T('23 state 字段名统一为 wrongBook',
+  typeof state.wrongBook==='object' && state.wrong===undefined);
 
 console.log('\n结果: PASS='+pass+'  FAIL='+fail);
 process.exit(fail?1:0);

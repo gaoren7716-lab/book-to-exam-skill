@@ -180,8 +180,15 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--border);bord
         <button class="btn ghost" onclick="startApplyExam()">🎯 应用题专项（场景+案例）</button>
         <button class="btn ghost" onclick="startExam('wrong')">🔁 错题重考 <span id="wrong-count"></span></button>
         <button class="btn ghost" onclick="startExam('browse')">📖 浏览模式（看题即看答案）</button>
+        <div style="margin-top:10px;padding:9px 12px;background:#1e2438;border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.7">
+          <b style="color:var(--text)">换设备？先把进度带走</b><br>
+          答题记录只存在这台设备的浏览器里，清缓存或换手机就会丢。
+        </div>
+        <button class="btn ghost small" onclick="exportProgress()">📤 导出进度（复制到剪贴板）</button>
+        <button class="btn ghost small" onclick="importProgress()">📥 导入进度（换设备用）</button>
         <button class="btn ghost small" onclick="resetAll()" style="margin-top:8px">🗑 清空所有记录</button>
       </div>
+      <div id="xfer-box" class="hidden" style="margin-top:10px;padding:12px 14px;background:#1e2438;border:1px solid var(--border);border-radius:10px"></div>
       <div style="margin-top:10px;padding:10px 14px;background:#1e2438;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted)" id="scope-echo"></div>
       <div style="margin-top:8px;text-align:right;font-size:12px;color:var(--muted)">💡 快捷键：数字键 1–6 选择选项，回车/空格进入下一题</div>
       <div class="warn-box" id="wrong-hint"></div>
@@ -254,6 +261,114 @@ const TYPE_LABEL = {choice:'单选题',scenario:'场景题',case:'案例题'};
 
 function loadState(){ try{ state = JSON.parse(localStorage.getItem(LS_KEY)) || state; }catch(e){} }
 function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+// ---------- 进度导出 / 导入 ----------
+// 为什么要这个：答题进度只存在本机浏览器，换设备、清缓存、换浏览器都会丢。
+// 错题本是这个系统的价值所在，不能一键清零。导出成一个文件，换设备导入即可接着考。
+const XFER_KEY = 'book_exam_xfer_v1';
+function exportProgress(){
+  const payload = {
+    _v: 1, _book: "《节奏管理》 考点考试系统", _pass: PASS_SCORE,
+    _at: new Date().toISOString(),
+    answered: state.answered || {}, wrong: state.wrongBook || {}, history: state.history || []
+  };
+  const text = JSON.stringify(payload, null, 1);
+  const n = Object.keys(payload.answered).length;
+  const w = Object.keys(payload.wrong).length;
+  // 存一份到剪贴板（主路径），同时尝试下载文件（兼容浏览器限制）
+  try { localStorage.setItem(XFER_KEY, text); } catch(e){}
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      ()=>toast('进度已复制到剪贴板（' + n + ' 题记录 / ' + w + ' 道错题），换设备粘贴导入即可'),
+      ()=>fallbackCopy(text, n, w)
+    );
+  } else fallbackCopy(text, n, w);
+}
+function fallbackCopy(text, n, w){
+  try {
+    const blob = new Blob([text], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '答题进度_' + "《节奏管理》 考点考试系统" + '.json';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+    toast('已下载进度文件（' + n + ' 题记录 / ' + w + ' 道错题）');
+  } catch(e){
+    showImportBox(text);
+  }
+}
+function showImportBox(text){
+  const el = document.getElementById('xfer-box');
+  if(!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = '<b>手动复制这段</b><textarea id="xfer-ta" readonly style="width:100%;height:110px;' +
+    'background:var(--panel2);color:var(--text);border:1px solid var(--border);' +
+    'border-radius:8px;padding:10px;font-size:12px;font-family:monospace"></textarea>' +
+    '<div style="margin-top:8px"><button class="btn small" onclick="copyXfer()">复制</button></div>';
+  document.getElementById('xfer-ta').value = text;
+}
+function copyXfer(){
+  const t = document.getElementById('xfer-ta');
+  if(!t) return;
+  t.select();
+  try { document.execCommand('copy'); toast('已复制'); }
+  catch(e){ toast('请手动按 Ctrl+C 复制'); }
+}
+function importProgress(){
+  const el = document.getElementById('xfer-box');
+  if(!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = '<b>粘贴之前导出的进度</b>' +
+    '<textarea id="xfer-in" placeholder="把导出的那段 JSON 粘进来" ' +
+    'style="width:100%;height:110px;background:var(--panel2);color:var(--text);' +
+    'border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace"></textarea>' +
+    '<div style="margin-top:8px"><button class="btn small" onclick="doImport()">导入并合并</button>' +
+    '<button class="btn ghost small" onclick="document.getElementById(\'xfer-box\').classList.add(\'hidden\')">关闭</button></div>';
+  document.getElementById('xfer-in').focus();
+}
+function doImport(){
+  const ta = document.getElementById('xfer-in');
+  const raw = (ta && ta.value || '').trim();
+  if(!raw){ toast('先粘贴内容'); return; }
+  let d;
+  try { d = JSON.parse(raw); } catch(e){ toast('这段不是有效的 JSON'); return; }
+  if(!d || typeof d!=='object' || !d.answered){ toast('这不像是本系统导出的进度'); return; }
+  if(d._book && "《节奏管理》 考点考试系统" && d._book.indexOf("《节奏管理》 考点考试系统".slice(0,6))<0){
+    toast('这是另一本书的进度：《' + (d._book||'?') + '》'); return;
+  }
+  // 合并而非覆盖：已有记录保留，答对过的以「答对」为准（更接近真实掌握）
+  let addR=0, addW=0;
+  Object.keys(d.answered||{}).forEach(id=>{
+    if(!CARD_BY_ID[id]) return;                    // 跳过本书没有的题（版本不一致）
+    if(!state.answered[id]){ state.answered[id] = d.answered[id]; addR++; }
+  });
+  Object.keys(d.wrong||{}).forEach(id=>{
+    if(!CARD_BY_ID[id]) return;
+    if(!state.wrongBook[id]){ state.wrongBook[id] = d.wrong[id]; addW++; }
+    if(state.answered[id]==='right') delete state.wrongBook[id];
+  });
+  (d.history||[]).forEach(h=>{ if(h && h.at) state.history.push(h); });
+  saveState();
+  document.getElementById('xfer-box').classList.add('hidden');
+  renderStats(); renderBookCard(); updateWrong(); renderScopeEcho();
+  toast('导入完成：新增 ' + addR + ' 题记录、' + addW + ' 道错题');
+}
+function toast(msg){
+  let t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:34px;transform:translateX(-50%);' +
+      'background:var(--panel);border:1px solid var(--border);border-radius:10px;' +
+      'padding:11px 20px;font-size:13px;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.35);' +
+      'max-width:88vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._tm);
+  t._tm = setTimeout(()=>{ t.style.opacity='0'; }, 4200);
+}
 
 function norm(s){
   if(Array.isArray(s)) s = s.join('；');
@@ -827,10 +942,17 @@ function confirmQuit(){
   if(confirm('确定退出本次考试？已答题目不计分。')) goHome();
 }
 function resetAll(){
-  if(confirm('确定清空错题本和所有答题记录？此操作不可恢复。')){
-    state = {wrongBook:{}, history:[], answered:{}};
-    saveState(); initHome();
-  }
+  const n = Object.keys(state.answered||{}).length;
+  const w = Object.keys(state.wrongBook||{}).length;
+  if(n===0 && w===0){ toast('当前没有记录'); return; }
+  let msg = '将清空 ' + n + ' 题答题记录与 ' + w + ' 道错题，此操作不可恢复。\n\n';
+  msg += '建议先点「导出进度」备份一份。\n\n确定继续？';
+  if(!confirm(msg)) return;
+  // 字段名必须与全代码一致：错题本是 state.wrongBook（不是 state.wrong），否则清不掉
+  //initHome 内部会 loadState + renderStats/renderBookCard/updateWrong，这里不重复调
+  state = {wrongBook:{}, history:[], answered:{}};
+  saveState(); initHome();
+  toast('已清空所有记录');
 }
 
 initHome();
