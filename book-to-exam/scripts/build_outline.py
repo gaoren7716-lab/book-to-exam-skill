@@ -33,8 +33,10 @@ FORMULA_RE = re.compile(r'[=＝]\s*\S')
 BOLD_RE = re.compile(r'\*\*(.+?)\*\*')
 # 全角/半角引号包住的术语 —— 知识框架里方法名几乎都用引号包，是最强的信号
 QUOTE_RE = re.compile(r'"([^"]{2,12})"')
-# 分隔符：顿号、斜杠、加号、箭头、连接号、分号、逗号、句读
-SPLIT_RE = re.compile(r'[、/／＋+；;，,。｜|~～\-—–→⇒>》」』\s]+')
+# 分隔符：顿号、斜杠、加号、箭头、连接号、分号、逗号、句读、问号、叹号
+# 问叹号必须算分隔符：否则「是同一件事吗？」会被当成 7 字整词，超过 6 字上限被丢弃，
+# 整个节点只剩「自查句式」这种废关键词，题目永远挂不上。
+SPLIT_RE = re.compile(r'[、/／＋+；;，,。？?！!｜|~～\-—–→⇒>》」』\s]+')
 # 需要剔除的通用词（不作为知识点关键词）
 STOPWORDS = {
     '动作', '步骤', '方法', '要点', '上台阶', '核心', '本质', '定位', '心态', '前提', '认知',
@@ -76,6 +78,16 @@ def core_of(name):
             n = n[len(pre):]
             break
     return n
+
+
+def clean_name(s):
+    """节点标题专用清理。
+
+    clean() 只剥首尾字符，遇到 `三个"千万别"` 这种「引号包住术语」的写法时，
+    首尾各剥掉一个引号，会留下 `三个"千万别` 这种不配对引号，大纲里很难看。
+    引号语义已经在 split_kw 的 QUOTE_RE 里用过了，这里直接全部去掉。
+    """
+    return clean(s).replace('"', '').strip()
 
 
 def split_kw(text, name=''):
@@ -204,7 +216,7 @@ def parse_framework(md_path):
             if not kws:
                 kws = [clean(name)]
             cur_ch['points'].append({
-                'name': name,
+                'name': clean_name(name),
                 'desc': ' ｜ '.join(cells),
                 'kw': kws[:12],
             })
@@ -227,7 +239,8 @@ def parse_framework(md_path):
             kws = split_kw(body, name)
             if not kws:
                 continue
-            cur_ch['points'].append({'name': name, 'desc': clean(body), 'kw': kws})
+            cur_ch['points'].append({'name': clean_name(name),
+                                     'desc': clean(body), 'kw': kws})
 
     return parts
 
@@ -268,12 +281,26 @@ def main():
     for c in cards:
         by_ch[c['chapter']].append(c)
 
-    # 题目关键词：题干 + 标签 + 选项 + 解析
-    # （标签本身就是提炼出的术语，选项与解析里通常也含方法名，是挂载的主要依据）
-    def card_blob(c):
-        return ' '.join([c['question'], ' '.join(c.get('tags') or []),
-                         ' '.join(c.get('options') or []),
-                         c.get('explanation') or ''])
+    # 题目关键词分两级，这是为了对付「干扰项污染」：
+    #   核心信号 = 题干 + 标签 + 解析 + 正确选项
+    #   完整信号 = 核心信号 + 错误选项
+    # 错误选项是按规则从其他章/其他方法借来的干扰项，含正确答案的术语时会把题目
+    # 挂到错的知识点上（实测：一题答案为「可视化」，因干扰项是「吹风/慢熬」，
+    # 被挂到了「凿穿心理防线」节点下）。所以先用核心信号匹配，不达标才允许
+    # 干扰项兜底——保证「挂错位置」比「挂不上」更罕见。
+    def card_blobs(c):
+        opts = c.get('options') or []
+        ans = (c.get('answer') or '').strip()
+        right, wrong = '', ''
+        if len(ans) == 1 and 'A' <= ans <= 'Z':
+            i = ord(ans) - ord('A')
+            if 0 <= i < len(opts):
+                right = opts[i] or ''
+                wrong = ' '.join(x for j, x in enumerate(opts)
+                                 if j != i and x)
+        core = ' '.join([c.get('question') or '', ' '.join(c.get('tags') or []),
+                         right, c.get('explanation') or ''])
+        return core, (core + ' ' + wrong).strip()
 
     matched, unmapped, coverage = set(), [], []
     report = []
@@ -295,20 +322,34 @@ def main():
                 pt['right'] = 0
 
             # 第一轮：框架要点挂载
+            # 两级匹配，专治「干扰项污染」：
+            #   核心信号 = 题干 + 标签 + 解析 + 正确选项
+            #   完整信号 = 核心信号 + 错误选项
+            # 错误选项是按规则从其他章/其他方法借来的干扰项，会把题目挂到错的知识点上
+            # （实测：一题答案为「可视化」，因干扰项是「吹风/慢熬」，被挂到了
+            # 「凿穿心理防线」节点下）。所以核心信号达标就直接采用，不达标才回退
+            # 到完整信号——既治挂错，也不丢原本靠选项才能挂上的题。
             for c in pool:
-                blob = card_blob(c)
+                core, full = card_blobs(c)
                 tags = ' '.join(c.get('tags') or [])
-                best, best_score = None, 0.0
-                for pt in ch['points']:
-                    score = 0.0
-                    for k in pt['kw']:
-                        if not k or len(k) < 2:
-                            continue
-                        if k in blob:
-                            # 关键词越长越可信；命中标签权重加倍
-                            score += min(len(k), 8) * (2 if k in tags else 1)
-                    if score > best_score:
-                        best, best_score = pt, score
+
+                def score_of(blob):
+                    best, bs = None, 0.0
+                    for pt in ch['points']:
+                        s = 0.0
+                        for k in pt['kw']:
+                            if not k or len(k) < 2:
+                                continue
+                            if k in blob:
+                                # 关键词越长越可信；命中标签权重加倍
+                                s += min(len(k), 8) * (2 if k in tags else 1)
+                        if s > bs:
+                            best, bs = pt, s
+                    return best, bs
+
+                best, best_score = score_of(core)
+                if best_score < 3:
+                    best, best_score = score_of(full)
                 # 阈值：加权得分 ≥3 才算可靠命中（避免把「本章其他要点」撑爆）
                 if best is not None and best_score >= 3:
                     best['cards'].append(c['id'])
@@ -352,6 +393,11 @@ def main():
                      if len(set(tag_cnt[t])) >= 2][:6]
             for t in cands:
                 ids = sorted(set(tag_cnt[t]))
+                # 一张题可以带多个标签，不筛就会挂到多个节点上（实测 c16-06 同时
+                # 挂在「会前寒暄」和「请教」两个节点下，学习时会重复出现同一题）
+                ids = [cid for cid in ids if cid not in used]
+                if not ids:
+                    continue
                 ch['points'].append({
                     'id': 'p%d-t%d' % (n, len(ch['points']) + 1),
                     'name': t,

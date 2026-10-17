@@ -96,21 +96,6 @@
       "total": 3,
       "right": 0,
       "fromTag": true
-     },
-     {
-      "id": "p1-t7",
-      "name": "决策",
-      "desc": "由题目标签聚合（知识框架未单列此要点）",
-      "kw": [
-       "决策"
-      ],
-      "cards": [
-       "c01-03",
-       "c01-09"
-      ],
-      "total": 2,
-      "right": 0,
-      "fromTag": true
      }
     ]
    },
