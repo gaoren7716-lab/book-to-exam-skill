@@ -149,7 +149,7 @@ python <skill目录>/scripts/build_outline.py --book-dir "<书库>/<书名>"
 ### 第 5 步：校验与交付
 
 1. `node --check` 校验抽取出的 `<script>` 语法
-2. **DOM 桩回归测试**：`node <仓库>/tools/regression_test.js`（实时读考试网页，覆盖勾选、取交集、错题重考、降级等 18 条路径）
+2. **DOM 桩回归测试**：`node <仓库>/tools/regression_test.js`（实时读考试网页，覆盖勾选、取交集、错题重考、降级、进度导出/导入往返等 23 条路径）
 3. 抽查 4 张卡片（覆盖三种题型）人工过目
 4. `present_files` 交付考试网页（第一项）+ 框架 + 闪卡 + JSON
 5. 回复中报告：页数/章节数/卡片数/知识点数/题型分布/校验结论，并说明大纲树怎么用来定向学
@@ -191,5 +191,6 @@ python <skill目录>/scripts/build_portal.py --lib-dir "<书库目录>"
 零填空扫描要**扫题库 JSON**（question/options/explanation），不要扫整份 HTML——
 JS 函数调用 `selectWeak()` 会命中"空括号"，快捷键提示会命中"空格"，必然误报。
 
-其他环境类问题（pip 安装被中断、`fitz` 导入告警、`doc.get_toc()` 版本差异、中文文件名排序、
-JSON 尾逗号、子代理上下文超限）见 `README.md` 的坑表。
+其他环境类问题：JSON 尾逗号、子代理上下文超限见 `README.md` 坑表；
+`pymupdf` 安装中断 / `fitz` 导入告警 / `doc.get_toc()` 版本差异都表现为「切章回归大面积 SKIP」，解法见坑表同一行。
+中文文件名排序只影响人工浏览——构建脚本内部按「章节号 + 题型」排序，不受影响。

@@ -9,6 +9,9 @@
 `考过设定分数线，即视为掌握全书`
 
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![在线演示](https://img.shields.io/badge/%E5%9C%A8%E7%BA%BF%E6%BC%94%E7%A4%BA-GitHub%20Pages-brightgreen)](https://gaoren7716-lab.github.io/book-to-exam-skill/)
+
+**🌐 在线演示：<https://gaoren7716-lab.github.io/book-to-exam-skill/>** —— 点开就能考，无需安装任何东西
 
 </div>
 
@@ -46,7 +49,7 @@
 git clone https://github.com/gaoren7716-lab/book-to-exam-skill.git
 cd book-to-exam-skill
 
-# ① 跑一遍自带演示数据（48 题 / 4 章 / 23 知识点）
+# ① 跑一遍自带演示数据（48 题 / 4 章 / 22 知识点）
 python book-to-exam/scripts/build_exam.py \
   --book-dir "examples/demo-节奏管理" \
   --title "《节奏管理》" --subtitle "示例自编" --pass-score 90
@@ -106,13 +109,16 @@ python book-to-exam/scripts/split_book.py "D:\书架\书名.epub" --out "./书�
 
 ## 部署：能，直接静态托管
 
-考试系统是**单文件自包含 HTML**（约 485 KB，题库占85%），零外部请求、零 CDN、零 `file:///` 硬编码。丢到任何静态托管都能直接跑：
+考试系统是**单文件自包含 HTML**（《沟通的方法》360 题实测 500 KB，题库 JSON 占 82%），零外部请求、零 CDN、零 `file:///` 硬编码。丢到任何静态托管都能直接跑：
 
 ```bash
 # 本地先验证（模拟线上）
 cd你的书籍目录
 python -m http.server 8811     # 然后浏览器打开 http://127.0.0.1:8811/考试系统.html
 ```
+
+**本项目已启用 GitHub Pages**：<https://gaoren7716-lab.github.io/book-to-exam-skill/>
+仓库根目录放了一个自包含落地页 `index.html`，并加了 `.nojekyll` 禁用 Jekyll（避免中文路径被处理出错）。
 
 上线三选一，都是零改动：
 
@@ -146,7 +152,7 @@ python -m http.server 8811     # 然后浏览器打开 http://127.0.0.1:8811/考
 | 路线 | 工作量 | 说明 |
 |---|---|---|
 | `web-view` 套壳 | 小 | 必须先有**已备案的 HTTPS 域名**，个人主体无法备案，主体认证也要过 |
-| 原生重写 | 大 | 37 KB 模板逻辑要拆成 WXML/WXSS/JS，`localStorage` 换成 `wx.setStorage`，题库 410 KB 要分包 |
+| 原生重写 | 大 | 模板逻辑（约 32 KB JS + 8 KB CSS）要拆成 WXML/WXSS/JS，`localStorage` 换成 `wx.setStorage`，题库 410 KB 要分包 |
 
 小程序里跑不了切章和出题（那需要 Python + AI），只能做「刷题客户端」。
 **建议先把网页部署上线**，等确认真的有人在手机上刷，再考虑套壳。
@@ -173,26 +179,33 @@ python -m http.server 8811     # 然后浏览器打开 http://127.0.0.1:8811/考
 ## 目录结构
 
 ```
-book-to-exam/
-├─ SKILL.md                  AI 执行规则：拆书、命题、构建、校验
-├─ assets/
-│  ├─ 考试系统_模板.html      自包含考试网页模板
-│  └─ 上传切章.html          TXT/Markdown 浏览器切章页
-└─ scripts/
-   ├─ 书架.py                本地书架网页：扫书 → 点书 → 切章 → 生成指令
-   ├─ split_book.py          PDF / EPUB / TXT / MD 切章
-   ├─ split_pdf.py           旧版 PDF 切章（保留兼容，新代码用 split_book）
-   ├─ build_exam.py          合并卡片 → 校验 → 生成 JSON/HTML/Anki
-   ├─ build_outline.py       解析知识框架 → 大纲树 + 题目挂载
-   └─ build_portal.py        多书聚合总控页
+book-to-exam-skill/              仓库根目录（GitHub Pages 发布根）
+├─ index.html                    Pages 落地页（本页即自包含证明）
+├─ .nojekyll                     禁用 Jekyll，避免中文路径被处理出错
+├─ README.md                     你在读的文件
+├─ LICENSE                       MIT
+├─ book-to-exam/
+│  ├─ SKILL.md                   AI 执行规则：拆书、命题、构建、校验
+│  ├─ assets/
+│  │  ├─ 考试系统_模板.html       自包含考试网页模板（改功能前先读它）
+│  │  └─ 上传切章.html           浏览器内切章页（PDF / EPUB / TXT / MD）
+│  └─ scripts/
+│     ├─ 书架.py                 本地书架网页：扫书 → 点书 → 切章 → 生成指令
+│     ├─ split_book.py           PDF / EPUB / TXT / MD 切章
+│     ├─ split_pdf.py            旧版 PDF 切章（保留兼容，新代码用 split_book）
+│     ├─ build_exam.py           合并卡片 → 校验 → 生成 JSON/HTML/Anki
+│     ├─ build_outline.py        解析知识框架 → 大纲树 + 题目挂载
+│     └─ build_portal.py         多书聚合总控页
 docs/
-├─ 出题手册.md               写卡规范
-├─ 校验清单.md               交付前必跑的机械校验
-└─ roadmap/                  待实施设想（非当前能力）
+├─ 出题手册.md                   写卡规范
+├─ 校验清单.md                   交付前必跑的机械校验
+├─ images/                       README 用的界面截图
+└─ roadmap/
+   └─ 待实施-交互增强方案.md      交互增强设计稿（非当前能力）
 tools/
-├─ regression_test.js        23 项 DOM 桩交互回归（含进度导出/导入往返）
-└─ split_regression.py       切章脚本回归（从真实书库取样本，8 项）
-examples/demo-节奏管理/       一分钟跑通全流程
+├─ regression_test.js            23 项 DOM 桩交互回归（含进度导出/导入往返）
+└─ split_regression.py           切章脚本回归（从真实书库取样本，8 项）
+examples/demo-节奏管理/           一分钟跑通全流程（虚构示例书）
 ```
 
 ---
@@ -212,6 +225,8 @@ examples/demo-节奏管理/       一分钟跑通全流程
 | 切章回归大面积 SKIP | 没装 PDF 解析库。`pip install pymupdf` 后重跑，否则 PDF 用例会静默跳过 |
 | 部署后换设备进度丢了 | 进度存在访问者浏览器 localStorage，不在服务器。换设备前先「导出进度」 |
 | 零填空扫描误报 | 扫**题库 JSON**（question/options/explanation），不要扫整份 HTML——JS 的 `selectWeak()` 会命中"空括号"，快捷键提示会命中"空格" |
+| 子代理产出的 `cards_*.json` 解析失败 | 九成是尾逗号或单引号。`build_exam.py` 会报出文件名，让子代理重出该文件即可 |
+| 子代理上下文超限、产出被截断 | 单代理背了太多章。按 `SKILL.md` 第 0 步的并行度表分批，每代理 3–6 章 |
 
 ---
 
